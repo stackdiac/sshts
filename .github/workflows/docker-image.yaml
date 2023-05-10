@@ -33,4 +33,5 @@ jobs:
         with:
           push: true
           extract-git-tag: true
+          tags: latest
           context: "{{defaultContext}}:docker"
