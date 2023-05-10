@@ -6,7 +6,11 @@ on:
       - 'docker-*'
     
 permissions: write-all
-  
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
 
   build-and-publish-tag:
