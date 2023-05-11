@@ -33,5 +33,5 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true          
-          tags: ${{ env.IMAGE_NAME }}:${{ github.ref }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           context: docker
