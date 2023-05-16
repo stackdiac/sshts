@@ -1,0 +1,39 @@
+{{- if .Values.tunnel.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.tunnel.local.service }}
+  labels:
+    {{- include "sshts.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.tunnel.local.port }}
+      targetPort: {{ .Values.tunnel.local.port_name }}    
+      protocol: TCP
+      name: {{ .Values.tunnel.local.port_name }}
+  selector:
+    {{- include "sshts.selectorLabels" . | nindent 4 }}
+{{- end }}
+
+{{- if and .Values.server.enabled .Values.server.run_on_control_plain }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sshts.fullname" . }}
+  labels:
+    {{- include "sshts.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.server.port }}
+      targetPort: {{ .Values.server.port }}
+      nodePort: {{ .Values.server.port }}
+      protocol: TCP
+      name: ssh
+  selector:
+    {{- include "sshts.selectorLabels" . | nindent 4 }}
+{{- end }}
+

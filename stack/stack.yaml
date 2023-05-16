@@ -1,0 +1,14 @@
+modules:
+  clients:
+    src: {{ stackd.resolve_path("sshts:stack/client/") }}
+    providers: [vault, kubernetes, helm, cluster_secret]
+    vars:
+      chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
+
+  server:
+    src: {{ stackd.resolve_path("sshts:stack/server/") }}
+    providers: [vault, kubernetes, helm, cluster_secret, hcloud]
+    inputs: [sys/nodes]
+    vars:
+      chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
+      run_on_control_plain: true

@@ -1,0 +1,120 @@
+{{- if and .Values.server.enabled .Values.server.run_on_control_plain }}
+---
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "sshts.fullname" . }}
+  labels:
+    {{- include "sshts.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "sshts.selectorLabels" . | nindent 6 }}
+  
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.server.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "sshts.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "sshts.selectorLabels" . | nindent 8 }}
+    spec:
+      volumes:
+        - name: authorized-keys
+          secret:
+            secretName: sshts-authorized-keys
+            defaultMode: 0644
+        - name: tun-ssh
+          emptyDir: {}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "sshts.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      
+ 
+      containers:
+        - name: {{ .Chart.Name }}
+          volumeMounts:          
+          - name: tun-ssh
+            readOnly: false
+            mountPath: "/home/tun/.ssh"
+          securityContext:
+            runAsUser: 0
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}          
+          command:
+            - /bin/bash
+            - "-cxe"
+            - >
+              rm -v /etc/ssh/ssh_host_*; 
+              ssh-keygen -A; 
+              mkdir -pv /run/sshd; 
+              /usr/sbin/sshd -D -p{{.Values.server.port | default "22"}} -e -oMaxSessions=1000 -oLogLevel=VERBOSE
+          ports:
+            - name: ssh
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: authorized-keys-updater
+          volumeMounts:
+          - name: authorized-keys
+            readOnly: true            
+            mountPath: "/authorized-keys/"
+          - name: tun-ssh
+            readOnly: false
+            mountPath: "/home/tun/.ssh"
+          securityContext:
+            runAsUser: 0
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}          
+          command:
+            - /bin/bash
+            - "-cxe"
+            - >
+              while true; do                
+                echo "Updating authorized_keys";
+                cat /authorized-keys/authorized_keys > /home/tun/.ssh/authorized_keys;
+                chown -R tun:tun /home/tun/.ssh;
+                chmod 0600 /home/tun/.ssh/authorized_keys;
+                chmod 0700 /home/tun/.ssh;
+                inotifywait -e delete_self /authorized-keys/authorized_keys;
+                sleep 3;
+              done
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ''
+      
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+    
+
+{{- end }}
