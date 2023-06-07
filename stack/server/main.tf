@@ -17,10 +17,10 @@ variable server_authorized_keys {
 }
 
 locals {
-  vault_secrets = [for k in var.server_authorized_keys: k if lookup(k, "vault", null) != null]
+  
+  vault_secrets = lookup(var.server_authorized_keys, "vault", [])
   vault_keys = [for i,s in local.vault_secrets: data.vault_generic_secret.authorized_key[i].data[s.key]]
-  static_keys = flatten([for k in var.server_authorized_keys: k.static if lookup(k, "static", null) != null])
-
+  static_keys = lookup(var.server_authorized_keys, "static", [])
 
   authorized_keys = join("\n", concat(
     local.static_keys,
@@ -28,9 +28,15 @@ locals {
   ))
 }
 
+output authorized_keys {
+  value       = local.authorized_keys
+  sensitive   = true  
+}
+
+
 data vault_generic_secret authorized_key {
   count = length(local.vault_secrets)
-  path = local.vault_secrets[0].vault
+  path = local.vault_secrets[count.index].path
 }
 
 

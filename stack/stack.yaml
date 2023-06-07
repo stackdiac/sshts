@@ -1,7 +1,113 @@
+schema:
+  openapi:  3.0.2
+  components:
+    schemas:
+      ClientVars:
+        type: object
+        required:
+          - tunnels
+        properties:
+          tunnels:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: "tunnel name"
+                replicaCount:
+                  type: integer
+                  description: "tunnel replica count"
+                  default: 1
+                ssh:
+                  type: object
+                  properties:
+                    server:
+                      type: string
+                      description: "server name"
+                    port:
+                      type: integer
+                      description: "server port"
+                    user:
+                      type: string
+                      description: "server user"
+                remote:
+                  type: object
+                  properties:
+                    service:
+                      type: string
+                      description: "remote service address"
+                    port:
+                      type: integer
+                      description: "remote service port"
+                local:
+                  type: object
+                  properties:
+                    service:
+                      type: string
+                      description: "local service name"
+                    namespace:
+                      type: string
+                      description: "local service namespace"
+                    port:
+                      type: integer
+                      description: "local service port; defaults to remote.port"
+                    port_name:
+                      type: string
+                      description: "local service port name"
+      SSHKeys:
+        type: object
+        required:
+          - id_ecdsa
+          - id_ecdsa.pub
+        properties:
+          id_ecdsa:
+            type: string
+            description: "id_ecdsa private key"
+          id_ecdsa.pub:
+            type: string
+            description: "id_ecdsa public key"
+      ServerVars:
+        type: object
+        required:          
+          - run_on_control_plain          
+        properties:          
+          run_on_control_plain:
+            type: boolean
+            description: "run sshts on control plain"
+          server_authorized_keys:            
+            type: object
+            description: "user static or vault authorized keys"
+            properties:
+              static:
+                type: array
+                description: "static authorized keys"
+                items:
+                  type: string
+              vault:
+                type: array
+                items:
+                  type: object
+                  description: "vault authorized keys"
+                  properties:
+                    path:
+                      type: string
+                      description: "vault secret path"
+                    key:
+                      type: string
+                      description: "vault secret key"
+
+
 modules:
   clients:
     src: {{ stackd.resolve_path("sshts:stack/client/") }}
     providers: [vault, kubernetes, helm, cluster_secret]
+    secrets:
+      ssh:
+        secret_type: SSHKeys
+        required: true
+    schemas:
+      vars: ClientVars
     vars:
       chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
 
@@ -9,6 +115,8 @@ modules:
     src: {{ stackd.resolve_path("sshts:stack/server/") }}
     providers: [vault, kubernetes, helm, cluster_secret, hcloud]
     inputs: [sys/nodes]
+    schemas:
+      vars: ServerVars
     vars:
       chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
       run_on_control_plain: true
