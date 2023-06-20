@@ -113,7 +113,7 @@ modules:
 
   server:
     src: {{ stackd.resolve_path("sshts:stack/server/") }}
-    providers: [vault, kubernetes, helm, cluster_secret, hcloud]
+    providers: [vault, kubernetes, helm, cluster_secret]
     inputs: [sys/nodes]
     schemas:
       vars: ServerVars

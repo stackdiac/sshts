@@ -18,7 +18,7 @@ resource kubernetes_namespace ns {
 }
 
 resource "helm_release" "client" { 
-    depends_on = [kubernetes_namespace.ns]
+    depends_on = [kubernetes_namespace.ns, kubernetes_secret.ssh]
     count = length(var.tunnels)
     name       = var.tunnels[count.index].name 
     namespace  = var.tunnels[count.index].local.namespace
