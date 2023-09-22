@@ -26,7 +26,7 @@ resource "helm_release" "client" {
   
   values = [
     yamlencode({
-      tunnel = var.tunnels[count.index]
+      tunnel = var.tunnels[count.index],
     }),
     yamlencode({
       tunnel = {
