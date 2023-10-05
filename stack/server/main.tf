@@ -15,6 +15,19 @@ variable server_authorized_keys {
   
   description = "Authorized keys for server"
 }
+variable "chart_version" {
+  default = "0.0.11"
+}
+
+variable nodeSelector {
+  default = {}
+}
+
+variable "tolerations" {
+  default = []
+}
+  
+
 
 locals {
   
@@ -57,9 +70,14 @@ resource "helm_release" "server" {
     name       = local.stackd.service
     namespace  = local.stackd.namespace
     chart = local.stackd.chart_path
-  
+    version = var.chart_version
   values = [
     yamlencode({
+      image = {
+        tag = var.chart_version
+      }
+      nodeSelector = var.nodeSelector
+      tolerations = var.tolerations
       server = {
         enabled = true
         run_on_control_plain = var.run_on_control_plain

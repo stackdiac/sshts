@@ -2,6 +2,18 @@ variable "tunnels" {
   type = any
 }
 
+variable "chart_version" {
+  default = "0.0.11"
+}
+
+variable nodeSelector {
+  default = {}
+}
+
+variable "tolerations" {
+  default = []
+}
+
 output tunnels {
     value = var.tunnels
 }
@@ -23,12 +35,18 @@ resource "helm_release" "client" {
     name       = var.tunnels[count.index].name 
     namespace  = var.tunnels[count.index].local.namespace
     chart = local.stackd.chart_path
+    version = var.chart_version
   
   values = [
     yamlencode({
       tunnel = var.tunnels[count.index],
     }),
     yamlencode({
+      image = {
+        tag = var.chart_version
+      }
+      nodeSelector = var.nodeSelector
+      tolerations = var.tolerations
       tunnel = {
         enabled = true
       }

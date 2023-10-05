@@ -7,6 +7,11 @@ schema:
         required:
           - tunnels
         properties:
+          chart_version:
+            type: string
+            description: "sshts chart version"          
+          nodeSelector: !include core:schema/k8s.yaml#/components/schemas/NodeSelector
+          tolerations: !include core:schema/k8s.yaml#/components/schemas/Tolerations
           tunnels:
             type: array
             items:
@@ -72,9 +77,14 @@ schema:
         required:          
           - run_on_control_plain          
         properties:          
+          chart_version:
+            type: string
+            description: "sshts chart version"
           run_on_control_plain:
             type: boolean
-            description: "run sshts on control plain"
+            description: "run sshts on control plain"          
+          nodeSelector: !include core:schema/k8s.yaml#/components/schemas/NodeSelector
+          tolerations: !include core:schema/k8s.yaml#/components/schemas/Tolerations
           server_authorized_keys:            
             type: object
             description: "user static or vault authorized keys"
