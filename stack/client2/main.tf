@@ -15,31 +15,35 @@ variable "tolerations" {
 }
 
 output tunnels {
-    value = var.tunnels
+    value = local.tunnels
 }
 
 locals {
-    namespaces = distinct([for tunnel in var.tunnels: tunnel.local.namespace])
+    tunnels = {for name, tunnel in var.tunnels: name => merge({name = name}, tunnel)}
+        
+    namespaces = distinct([for name, tunnel in local.tunnels: tunnel.local.namespace])
+    create_namespaces = distinct([for name, tunnel in local.tunnels: tunnel.local.namespace if lookup(tunnel.local, "create_namespace", false)])
 }
 
 resource kubernetes_namespace ns {
-    count = length(local.namespaces)
+    count = length(local.create_namespaces)
     metadata {
-        name = local.namespaces[count.index]
+        name = local.create_namespaces[count.index]
     }
 }
 
 resource "helm_release" "client" { 
+    for_each = local.tunnels
     depends_on = [kubernetes_namespace.ns, kubernetes_secret.ssh]
-    count = length(var.tunnels)
-    name       = var.tunnels[count.index].name 
-    namespace  = var.tunnels[count.index].local.namespace
+    
+    name       = each.value.name 
+    namespace  = each.value.local.namespace
     chart = local.stackd.chart_path
     version = var.chart_version
   
   values = [
     yamlencode({
-      tunnel = var.tunnels[count.index],
+      tunnel = each.value,
     }),
     yamlencode({
       image = {

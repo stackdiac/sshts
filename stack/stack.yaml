@@ -2,6 +2,52 @@ schema:
   openapi:  3.0.2
   components:
     schemas:
+      Tunnel: &Tunnel
+        type: object
+        properties:
+          name:
+            type: string
+            description: "tunnel name override"
+          replicaCount:
+            type: integer
+            description: "tunnel replica count"
+            default: 1
+          ssh:
+            type: object
+            properties:
+              server:
+                type: string
+                description: "server name"
+              port:
+                type: integer
+                description: "server port"
+              user:
+                type: string
+                description: "server user"
+          remote:
+            type: object
+            properties:
+              service:
+                type: string
+                description: "remote service address"
+              port:
+                type: integer
+                description: "remote service port"
+          local:
+            type: object
+            properties:
+              service:
+                type: string
+                description: "local service name"
+              namespace:
+                type: string
+                description: "local service namespace"
+              port:
+                type: integer
+                description: "local service port; defaults to remote.port"
+              port_name:
+                type: string
+                description: "local service port name"
       ClientVars:
         type: object
         required:
@@ -14,52 +60,22 @@ schema:
           tolerations: !include core:schema/k8s.yaml#/components/schemas/Tolerations
           tunnels:
             type: array
-            items:
-              type: object
-              properties:
-                name:
-                  type: string
-                  description: "tunnel name"
-                replicaCount:
-                  type: integer
-                  description: "tunnel replica count"
-                  default: 1
-                ssh:
-                  type: object
-                  properties:
-                    server:
-                      type: string
-                      description: "server name"
-                    port:
-                      type: integer
-                      description: "server port"
-                    user:
-                      type: string
-                      description: "server user"
-                remote:
-                  type: object
-                  properties:
-                    service:
-                      type: string
-                      description: "remote service address"
-                    port:
-                      type: integer
-                      description: "remote service port"
-                local:
-                  type: object
-                  properties:
-                    service:
-                      type: string
-                      description: "local service name"
-                    namespace:
-                      type: string
-                      description: "local service namespace"
-                    port:
-                      type: integer
-                      description: "local service port; defaults to remote.port"
-                    port_name:
-                      type: string
-                      description: "local service port name"
+            items: *Tunnel
+
+      Client2Vars:
+        type: object
+        required:
+          - tunnels
+        properties:
+          chart_version:
+            type: string
+            description: "sshts chart version"          
+          nodeSelector: !include core:schema/k8s.yaml#/components/schemas/NodeSelector
+          tolerations: !include core:schema/k8s.yaml#/components/schemas/Tolerations
+          tunnels:
+            type: object
+            additionalProperties: *Tunnel
+            
       SSHKeys:
         type: object
         required:
@@ -119,7 +135,19 @@ modules:
     schemas:
       vars: ClientVars
     vars:
-      chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
+      chart_path: '{{stackd.resolve_path("sshts:charts/sshts")}}'
+  
+  clients2:
+    src: sshts:stack/client2/
+    providers: [vault, kubernetes, helm, cluster_secret]
+    secrets:
+      ssh:
+        secret_type: SSHKeys
+        required: true
+    schemas:
+      vars: Client2Vars
+    vars:
+      chart_path: '{{stackd.resolve_path("sshts:charts/sshts")}}'
 
   server:
     src: sshts:stack/server/
@@ -127,5 +155,5 @@ modules:
     schemas:
       vars: ServerVars
     vars:
-      chart_path: {{stackd.resolve_path("sshts:charts/sshts")}}
+      chart_path: '{{stackd.resolve_path("sshts:charts/sshts")}}'
       run_on_control_plain: true
