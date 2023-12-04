@@ -137,7 +137,7 @@ modules:
     vars:
       chart_path: '{{stackd.resolve_path("sshts:charts/sshts")}}'
   
-  clients2:
+  tunnels:
     src: sshts:stack/client2/
     providers: [vault, kubernetes, helm, cluster_secret]
     secrets:
